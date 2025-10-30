@@ -1,0 +1,17 @@
+# Node
+node_modules/
+dist/
+.env
+*.log
+
+# TypeScript
+*.tsbuildinfo
+
+# IDEs
+.vscode/
+.idea/
+.DS_Store
+
+/src/generated/prisma
+
+/src/generated/prisma
