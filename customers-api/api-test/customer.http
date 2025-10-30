@@ -1,0 +1,115 @@
+@baseUrl = http://localhost:3001
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+
+# CREATE CUSTOMER - Success
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Juan Pérez",
+  "email": "juan.perez@example.com",
+  "phone": "+1234567890"
+}
+
+###
+# CREATE CUSTOMER - Without Auth (401)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+
+{
+  "name": "María García",
+  "email": "maria.garcia@example.com",
+  "phone": "+0987654321"
+}
+
+###
+
+# CREATE CUSTOMER - Invalid JWT (401)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer invalid-token
+
+{
+  "name": "Carlos López",
+  "email": "carlos.lopez@example.com",
+  "phone": "+1122334455"
+}
+
+###
+
+# CREATE CUSTOMER - Validation Error: Missing name (400)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "email": "test@example.com",
+  "phone": "+1234567890"
+}
+
+###
+
+# CREATE CUSTOMER - Validation Error: Invalid email (400)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Test User",
+  "email": "invalid-email",
+  "phone": "+1234567890"
+}
+
+###
+
+# CREATE CUSTOMER - Validation Error: Name too short (400)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "AB",
+  "email": "test@example.com",
+  "phone": "+1234567890"
+}
+
+###
+
+# CREATE CUSTOMER - Validation Error: Missing phone (400)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Test User",
+  "email": "test2@example.com"
+}
+
+###
+
+# CREATE CUSTOMER - Duplicate Email (409)
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Duplicate User",
+  "email": "juan.perez@example.com",
+  "phone": "+9999999999"
+}
+
+###
+
+# CREATE CUSTOMER - Another successful customer
+POST {{baseUrl}}/customers
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Ana Martínez",
+  "email": "ana.martinez@example.com",
+  "phone": "+5566778899"
+}
+
+

@@ -1,0 +1,36 @@
+@baseUrl = http://localhost:3001
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+@serviceToken = internal_service_secret
+
+@CUSTOMER_ID = 14034d60-bcba-425b-b891-2841122c4b42
+
+# GET INTERNAL CUSTOMER - Success with SERVICE_TOKEN
+
+GET {{baseUrl}}/internal/customers/{{CUSTOMER_ID}}
+Authorization: Bearer {{serviceToken}}
+
+
+###
+# GET INTERNAL CUSTOMER - Without Auth (403)
+GET {{baseUrl}}/internal/customers/{{CUSTOMER_ID}}
+
+###
+# GET INTERNAL CUSTOMER - With JWT Token (403)
+GET {{baseUrl}}/internal/customers/{{CUSTOMER_ID}}
+Authorization: Bearer {{jwtToken}}
+
+###
+# GET INTERNAL CUSTOMER - Invalid SERVICE_TOKEN (403)
+GET {{baseUrl}}/internal/customers/{{CUSTOMER_ID}}
+Authorization: Bearer invalid_service_token
+
+###
+# GET INTERNAL CUSTOMER - Customer Not Found (404)
+GET {{baseUrl}}/internal/customers/non-existent-id-12345
+Authorization: Bearer {{serviceToken}}
+
+###
+# GET INTERNAL CUSTOMER - Empty ID (404)
+GET {{baseUrl}}/internal/customers/
+Authorization: Bearer {{serviceToken}}
+
