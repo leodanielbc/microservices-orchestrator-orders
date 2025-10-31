@@ -103,4 +103,16 @@ export class Order {
 
         return true;
     }
+
+    public toJSON() {
+        return {
+            id: this.id,
+            customerId: this.customerId,
+            status: this.status,
+            totalCents: this.totalCents,
+            items: this.items?.map(item => item.toJSON()),
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+        };
+    }
 }

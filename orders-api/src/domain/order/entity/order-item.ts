@@ -53,4 +53,15 @@ export class OrderItem {
     public setOrderId(orderId: string): void {
         this.props.orderId = orderId;
     }
+
+    public toJSON() {
+        return {
+            id: this.id,
+            orderId: this.orderId,
+            productId: this.productId,
+            qty: this.qty,
+            unitPriceCents: this.unitPriceCents,
+            subtotalCents: this.subtotalCents,
+        };
+    }
 }

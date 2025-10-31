@@ -56,4 +56,16 @@ export class Product {
     public hasStock(quantity: number): boolean {
         return this.props.stock >= quantity;
     }
+
+    public toJSON() {
+        return {
+            id: this.id,
+            sku: this.sku,
+            name: this.name,
+            priceCents: this.priceCents,
+            stock: this.stock,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+        };
+    }
 }
