@@ -1,0 +1,39 @@
+@baseUrl = http://localhost:3001
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+@customerId = 14034d60-bcba-425b-b891-2841122c4b42
+
+###
+# Success (200)
+DELETE {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# Without Auth (401)
+DELETE {{baseUrl}}/customers/{{customerId}}
+
+###
+
+# Invalid JWT (401)
+DELETE {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer invalid-token
+
+###
+
+# Customer Not Found (404)
+DELETE {{baseUrl}}/customers/14034d60-bcba-425b-b891-2841122c4b33
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# Invalid UUID format (400)
+DELETE {{baseUrl}}/customers/invalid-uuid
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# Verify deletion (404)
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{jwtToken}}
+
+

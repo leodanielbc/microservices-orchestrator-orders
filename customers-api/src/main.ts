@@ -6,11 +6,13 @@ import { GetInternalCustomerUseCase } from './usecases/get-internal-customer/get
 import { GetCustomerUseCase } from './usecases/get-customer/get-customer.usecase';
 import { SearchCustomersUseCase } from './usecases/search-customers/search-customers.usecase';
 import { UpdateCustomerUseCase } from './usecases/update-customer/update-customer.usecase';
+import { DeleteCustomerUseCase } from './usecases/delete-customer/delete-customer.usecase';
 import { CreateCustomerRoute } from './infrastructure/api/express/routes/create-customer.router';
 import { GetInternalCustomerRoute } from './infrastructure/api/express/routes/get-internal-customer.router';
 import { GetCustomerRoute } from './infrastructure/api/express/routes/get-customer.router';
 import { SearchCustomersRoute } from './infrastructure/api/express/routes/search-customers.router';
 import { UpdateCustomerRoute } from './infrastructure/api/express/routes/update-customer.router';
+import { DeleteCustomerRoute } from './infrastructure/api/express/routes/delete-customer.router';
 import { ApiExpress } from './infrastructure/api/express/api.express';
 
 function main () {
@@ -21,12 +23,14 @@ function main () {
     const getCustomerUsecase = new GetCustomerUseCase(repository);
     const searchCustomersUsecase = new SearchCustomersUseCase(repository);
     const updateCustomerUsecase = new UpdateCustomerUseCase(repository);
+    const deleteCustomerUsecase = new DeleteCustomerUseCase(repository);
 
     const createRoute = CreateCustomerRoute.create(createCustomerUsecase);
     const getInternalCustomerRoute = GetInternalCustomerRoute.create(getInternalCustomerUsecase);
     const getCustomerRoute = GetCustomerRoute.create(getCustomerUsecase);
     const searchCustomersRoute = SearchCustomersRoute.create(searchCustomersUsecase);
     const updateCustomerRoute = UpdateCustomerRoute.create(updateCustomerUsecase);
+    const deleteCustomerRoute = DeleteCustomerRoute.create(deleteCustomerUsecase);
 
     const api = ApiExpress.create([
         searchCustomersRoute,
@@ -34,6 +38,7 @@ function main () {
         getInternalCustomerRoute,
         getCustomerRoute,
         updateCustomerRoute,
+        deleteCustomerRoute,
     ]);
     const port = 3001;
     api.start(port);
