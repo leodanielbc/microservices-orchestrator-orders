@@ -51,4 +51,16 @@ export class Customer {
     public get updatedAt(): string | undefined {
         return this.props.updatedAt;
     }
+
+    public toJSON() {
+        return {
+            id: this.id,
+            name: this.name,
+            email: this.email,
+            phone: this.phone,
+            isDeleted: this.isDeleted,
+            createdAt: this.createdAt,
+            updatedAt: this.updatedAt,
+        };
+    }
 }

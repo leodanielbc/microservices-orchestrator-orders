@@ -36,11 +36,12 @@ export class CreateCustomerRoute implements Route {
             const customer = await this.createCustomerUseCase.execute(input);
             res.status(201).json(customer);
             } catch (error: any) {
+            console.error('Error creating customer:', error);
             if (error.message.includes("email already exists")) {
                 res.status(409).json({ message: error.message });
                 return;
             }
-            res.status(500).json({ message: "Server error" });
+            res.status(500).json({ message: "Server error", error: error.message });
             }
         },
         ];
