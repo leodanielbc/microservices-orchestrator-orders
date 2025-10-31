@@ -1,0 +1,71 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id        String   @id
+  sku       String   @unique
+  name      String
+  priceCents Int     @map("price_cents")
+  stock     Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+enum OrderStatus {
+  CREATED
+  CONFIRMED
+  CANCELED
+}
+
+model Order {
+  id         String      @id
+  customerId String      @map("customer_id")
+  status     OrderStatus @default(CREATED)
+  totalCents Int         @map("total_cents")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String @id
+  orderId         String @map("order_id")
+  productId       String @map("product_id")
+  qty             Int
+  unitPriceCents  Int    @map("unit_price_cents")
+  subtotalCents   Int    @map("subtotal_cents")
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model IdempotencyKey {
+  key          String   @id
+  targetType   String   @map("target_type")
+  targetId     String   @map("target_id")
+  status       String
+  responseBody String?  @map("response_body") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  expiresAt    DateTime @map("expires_at")
+
+  @@map("idempotency_keys")
+}
