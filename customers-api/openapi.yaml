@@ -1,0 +1,549 @@
+openapi: 3.0.3
+info:
+  title: Customers API
+  description: |
+    API de gestión de clientes (Customers) con Node.js, Express y MySQL.
+
+    Esta API permite:
+    - Creación de clientes
+    - Búsqueda y listado con paginación
+    - Obtención de detalles de cliente
+    - Actualización de información
+    - Eliminación lógica (soft-delete)
+
+    ## Autenticación
+    La mayoría de los endpoints requieren autenticación mediante JWT (JSON Web Token).
+    Se debe enviar el token en el header `Authorization` con el formato: `Bearer <token>`
+
+    ## Paginación
+    El endpoint de búsqueda utiliza paginación basada en cursor para un rendimiento óptimo.
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3001
+    description: Servidor de desarrollo local
+
+tags:
+  - name: Customers
+    description: Operaciones públicas sobre clientes
+  - name: Internal
+    description: Endpoints internos para comunicación entre microservicios
+
+security:
+  - bearerAuth: []
+
+paths:
+  /customers:
+    post:
+      tags:
+        - Customers
+      summary: Crear un nuevo cliente
+      description: Crea un nuevo cliente en el sistema con nombre, email y teléfono
+      operationId: createCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCustomerRequest'
+            examples:
+              example1:
+                summary: Cliente básico
+                value:
+                  name: Juan Pérez
+                  email: juan.perez@example.com
+                  phone: "+1234567890"
+      responses:
+        '201':
+          description: Cliente creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCustomerResponse'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missingName:
+                  summary: Falta el nombre
+                  value:
+                    message: Validation failed
+                    details:
+                      - '"name" is required'
+                invalidEmail:
+                  summary: Email inválido
+                  value:
+                    message: Validation failed
+                    details:
+                      - '"email" must be a valid email'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: El email ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer with this email already exists.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      tags:
+        - Customers
+      summary: Buscar y listar clientes
+      description: |
+        Obtiene una lista de clientes con soporte para:
+        - Búsqueda por nombre o email
+        - Paginación basada en cursor
+        - Límite configurable de resultados
+      operationId: searchCustomers
+      parameters:
+        - name: search
+          in: query
+          description: Término de búsqueda (busca en nombre y email)
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: Juan
+        - name: cursor
+          in: query
+          description: ID del último elemento de la página anterior (para paginación)
+          required: false
+          schema:
+            type: string
+            format: uuid
+          example: 14034d60-bcba-425b-b891-2841122c4b42
+        - name: limit
+          in: query
+          description: Número máximo de resultados a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Lista de clientes obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchCustomersResponse'
+        '400':
+          description: Parámetros de búsqueda inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /customers/{id}:
+    get:
+      tags:
+        - Customers
+      summary: Obtener cliente por ID
+      description: Obtiene los detalles completos de un cliente específico
+      operationId: getCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: ID con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    put:
+      tags:
+        - Customers
+      summary: Actualizar un cliente
+      description: |
+        Actualiza la información de un cliente existente.
+        Se puede actualizar uno o más campos (nombre, email, teléfono).
+        Al menos un campo debe estar presente.
+      operationId: updateCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCustomerRequest'
+            examples:
+              allFields:
+                summary: Actualizar todos los campos
+                value:
+                  name: Juan Pérez Updated
+                  email: juan.updated@example.com
+                  phone: "+9876543210"
+              onlyName:
+                summary: Actualizar solo nombre
+                value:
+                  name: Juan Pérez Updated
+              onlyEmail:
+                summary: Actualizar solo email
+                value:
+                  email: juan.updated@example.com
+      responses:
+        '200':
+          description: Cliente actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateCustomerResponse'
+        '400':
+          description: Error de validación o body vacío
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer not found.
+        '409':
+          description: El email ya está en uso por otro cliente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Email already in use by another customer.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    delete:
+      tags:
+        - Customers
+      summary: Eliminar un cliente (soft-delete)
+      description: |
+        Realiza una eliminación lógica del cliente.
+        El cliente no se elimina físicamente de la base de datos,
+        sino que se marca como eliminado (isDeleted = true).
+        Los clientes eliminados no aparecerán en búsquedas ni consultas.
+      operationId: deleteCustomer
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Cliente eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Customer deleted successfully
+        '400':
+          description: ID con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Cliente no encontrado o ya eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/customers/{id}:
+    get:
+      tags:
+        - Internal
+      summary: Obtener cliente por ID (endpoint interno)
+      description: |
+        Endpoint interno para comunicación entre microservicios.
+        Requiere autenticación de servicio a servicio.
+        Utilizado por otros microservicios para obtener información de clientes.
+      operationId: getInternalCustomer
+      security:
+        - serviceAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CustomerId'
+      responses:
+        '200':
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        '400':
+          description: ID con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer ID is required.
+        '401':
+          description: Autenticación de servicio requerida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Customer not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para autenticación de usuarios
+    serviceAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para autenticación entre servicios
+
+  parameters:
+    CustomerId:
+      name: id
+      in: path
+      description: ID único del cliente (UUID)
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 14034d60-bcba-425b-b891-2841122c4b42
+
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del cliente
+          example: 14034d60-bcba-425b-b891-2841122c4b42
+        name:
+          type: string
+          description: Nombre completo del cliente
+          minLength: 3
+          maxLength: 100
+          example: Juan Pérez
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del cliente (único)
+          example: juan.perez@example.com
+        phone:
+          type: string
+          description: Número de teléfono del cliente
+          maxLength: 20
+          example: "+1234567890"
+        isDeleted:
+          type: boolean
+          description: Indica si el cliente ha sido eliminado (soft-delete)
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación del registro
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de última actualización
+          example: "2024-01-20T14:45:00Z"
+      required:
+        - id
+        - name
+        - email
+        - phone
+
+    CreateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre completo del cliente
+          minLength: 3
+          maxLength: 100
+          example: Juan Pérez
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del cliente
+          example: juan.perez@example.com
+        phone:
+          type: string
+          description: Número de teléfono del cliente
+          maxLength: 20
+          example: "+1234567890"
+      required:
+        - name
+        - email
+        - phone
+
+    CreateCustomerResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Customer created successfully
+        customer:
+          $ref: '#/components/schemas/Customer'
+
+    UpdateCustomerRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre completo del cliente
+          minLength: 3
+          maxLength: 100
+          example: Juan Pérez Updated
+        email:
+          type: string
+          format: email
+          description: Correo electrónico del cliente
+          example: juan.updated@example.com
+        phone:
+          type: string
+          description: Número de teléfono del cliente
+          maxLength: 20
+          example: "+9876543210"
+      minProperties: 1
+      description: Al menos un campo debe estar presente para actualizar
+
+    UpdateCustomerResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Customer updated successfully
+        customer:
+          $ref: '#/components/schemas/Customer'
+
+    SearchCustomersResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          description: Lista de clientes encontrados
+          items:
+            $ref: '#/components/schemas/Customer'
+        pagination:
+          type: object
+          properties:
+            nextCursor:
+              type: string
+              format: uuid
+              nullable: true
+              description: ID del último elemento (usar como cursor para la siguiente página)
+              example: 14034d60-bcba-425b-b891-2841122c4b42
+            hasMore:
+              type: boolean
+              description: Indica si hay más resultados disponibles
+              example: true
+            limit:
+              type: integer
+              description: Límite de resultados aplicado
+              example: 10
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje de error descriptivo
+          example: Customer not found.
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje general del error
+          example: Validation failed
+        details:
+          type: array
+          description: Lista de errores de validación específicos
+          items:
+            type: string
+          example:
+            - '"name" is required'
+            - '"email" must be a valid email'
+
+  responses:
+    Unauthorized:
+      description: No autorizado - Token inválido, expirado o ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missingToken:
+              summary: Token ausente
+              value:
+                message: Authentication required. Missing Authorization header.
+            invalidToken:
+              summary: Token inválido
+              value:
+                message: Invalid or expired token.
+
+    ServerError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Server error

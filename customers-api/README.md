@@ -93,6 +93,17 @@ docker build -t customers-api .
 docker run -p 3001:3001 --env-file .env customers-api
 ```
 
+## 📋 Endpoints disponibles
+
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| POST | `/customers` | Crear un nuevo cliente | JWT |
+| GET | `/customers` | Buscar/listar clientes con paginación | JWT |
+| GET | `/customers/:id` | Obtener detalles de un cliente | JWT |
+| PUT | `/customers/:id` | Actualizar información de cliente | JWT |
+| DELETE | `/customers/:id` | Eliminar cliente (soft-delete) | JWT |
+| GET | `/internal/customers/:id` | Obtener cliente (uso interno) | Service Token |
+
 ## Autenticación
 
 ### JWT Token (Para clientes externos)
@@ -178,11 +189,12 @@ customers-api/
 │   └── migrations/            # Migraciones
 ├── api-test/
 │   └── customer.http          # Pruebas HTTP
+├── openapi.yaml              # Documentación OpenAPI 3.0
 ├── Dockerfile                 # Configuración Docker
 ├── .env.example              # Variables de entorno de ejemplo
 ├── tsconfig.json             # Configuración TypeScript
 ├── package.json              # Dependencias
-└── README.md                 # Informacion extra
+└── README.md                 # Documentación del proyecto
 ```
 
 ## Seguridad
