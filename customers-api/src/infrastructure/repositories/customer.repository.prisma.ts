@@ -102,9 +102,9 @@ export class CustomerRepositoryPrisma implements CustomerRepository {
 
   public async search(options: {
     search?: string;
-    cursor?: number;
+    cursor?: string;
     limit: number;
-  }): Promise<Customer[]> {
+  }): Promise<{ customers: Customer[], nextCursor: string | null }> {
     const { search, cursor, limit } = options;
 
     const whereClause = {
@@ -116,12 +116,21 @@ export class CustomerRepositoryPrisma implements CustomerRepository {
 
     const customers = await this.prismaClient.customer.findMany({
       where: whereClause,
-      take: limit,
-      ...(cursor && { skip: 1, cursor: { id: cursor.toString() } }),
+      take: limit + 1,
+      ...(cursor && { skip: 1, cursor: { id: cursor } }),
       orderBy: { createdAt: "asc" },
     });
 
-    return customers.map(mapToDomain);
+    const hasNextPage = customers.length > limit;
+    const customerList = hasNextPage ? customers.slice(0, limit) : customers;
+    const nextCursor = hasNextPage && customerList.length > 0
+      ? customerList[customerList.length - 1]!.id
+      : null;
+
+    return {
+      customers: customerList.map(mapToDomain),
+      nextCursor
+    };
   }
 
   public async softDelete(id: string): Promise<boolean> {

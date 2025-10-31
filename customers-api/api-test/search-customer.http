@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:3001
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+@customerId = 14034d60-bcba-425b-b891-2841122c4b42
+
+
+# SEARCH CUSTOMERS - Get all customers (no filters)
+GET {{baseUrl}}/customers
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - Search by name
+GET {{baseUrl}}/customers?search=Juani
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - Search by email
+GET {{baseUrl}}/customers?search=example.com
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - With limit
+GET {{baseUrl}}/customers?limit=5
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - With search and limit
+GET {{baseUrl}}/customers?search=jua&limit=3
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - With cursor for pagination
+@idUser = 14034d60-bcba-425b-b891-2841122c4b42
+GET {{baseUrl}}/customers?cursor={{idUser}}&limit=5
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - Without Auth (401)
+GET {{baseUrl}}/customers
+
+###
+
+# SEARCH CUSTOMERS - Invalid JWT (401)
+GET {{baseUrl}}/customers
+Authorization: Bearer invalid-token
+
+###
+
+# SEARCH CUSTOMERS - Invalid limit (400)
+GET {{baseUrl}}/customers?limit=invalid
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - Limit exceeds max 100
+GET {{baseUrl}}/customers?limit=200
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# SEARCH CUSTOMERS - Invalid cursor format (400)
+GET {{baseUrl}}/customers?cursor=invalid-uuid
+Authorization: Bearer {{jwtToken}}

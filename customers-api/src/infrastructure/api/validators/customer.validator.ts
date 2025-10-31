@@ -14,6 +14,12 @@ const customerIdSchema = Joi.object({
     id: Joi.string().uuid().required()
 });
 
+const searchCustomersQuerySchema = Joi.object({
+    search: Joi.string().trim().min(1).max(100).optional(),
+    cursor: Joi.string().uuid().optional(),
+    limit: Joi.number().integer().min(1).max(100).optional()
+});
+
 
 export const validateCreateCustomer = (req: Request, res: Response, next: NextFunction): any => {
     const { error, value } = createCustomerSchema.validate(req.body, { abortEarly: false });
@@ -38,5 +44,17 @@ export const validateCustomerId = (req: Request, res: Response, next: NextFuncti
         });
     }
     req.params = value;
+    next();
+};
+
+export const validateSearchCustomersQuery = (req: Request, res: Response, next: NextFunction): any => {
+    const { error } = searchCustomersQuerySchema.validate(req.query, { abortEarly: false });
+
+    if (error) {
+        return res.status(400).json({
+            message: 'Invalid query parameters',
+            details: error.details.map(d => d.message)
+        });
+    }
     next();
 };
