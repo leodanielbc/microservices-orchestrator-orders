@@ -1,0 +1,123 @@
+@baseUrl = http://localhost:3001
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+@customerId = 14034d60-bcba-425b-b891-2841122c4b42
+
+###
+# UPDATE CUSTOMER - Success: Update all fields (200)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Juan Pérez Updated",
+  "email": "juan.perez.updated@example.com",
+  "phone": "+9876543210"
+}
+
+###
+
+# UPDATE CUSTOMER - Success: Update only name (200)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Juan Pérez - Name Only"
+}
+
+###
+
+# UPDATE CUSTOMER - Success: Update only email (200)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "email": "juan.email.only@example.com"
+}
+
+###
+
+# UPDATE CUSTOMER - Success: Update only phone (200)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "phone": "+1111111111"
+}
+
+###
+
+# UPDATE CUSTOMER - Without Auth (401)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+
+{
+  "name": "Unauthorized Update"
+}
+
+###
+
+# UPDATE CUSTOMER - Invalid JWT (401)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer invalid-token
+
+{
+  "name": "Invalid Token Update"
+}
+
+###
+
+# UPDATE CUSTOMER - Customer Not Found (404)
+PUT {{baseUrl}}/customers/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Non-existent Customer"
+}
+
+###
+
+# UPDATE CUSTOMER - Invalid UUID format (400)
+PUT {{baseUrl}}/customers/invalid-uuid
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "name": "Invalid UUID"
+}
+
+###
+
+# UPDATE CUSTOMER - Empty body (400)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{}
+
+###
+
+# UPDATE CUSTOMER - Invalid email format (400)
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "email": "invalid-email-format"
+}
+
+###
+
+# UPDATE CUSTOMER - Duplicate email (409)
+
+PUT {{baseUrl}}/customers/{{customerId}}
+Content-Type: application/json
+Authorization: Bearer {{jwtToken}}
+
+{
+  "email": "juaanita@example.com"
+}

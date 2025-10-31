@@ -20,6 +20,12 @@ const searchCustomersQuerySchema = Joi.object({
     limit: Joi.number().integer().min(1).max(100).optional()
 });
 
+const updateCustomerSchema = Joi.object({
+    name: Joi.string().trim().min(3).max(100).optional(),
+    email: Joi.string().email().optional(),
+    phone: Joi.string().trim().max(20).optional()
+}).min(1);
+
 
 export const validateCreateCustomer = (req: Request, res: Response, next: NextFunction): any => {
     const { error, value } = createCustomerSchema.validate(req.body, { abortEarly: false });
@@ -56,5 +62,18 @@ export const validateSearchCustomersQuery = (req: Request, res: Response, next: 
             details: error.details.map(d => d.message)
         });
     }
+    next();
+};
+
+export const validateUpdateCustomer = (req: Request, res: Response, next: NextFunction): any => {
+    const { error, value } = updateCustomerSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+        return res.status(400).json({
+            message: 'Validation failed',
+            details: error.details.map(d => d.message)
+        });
+    }
+    req.body = value;
     next();
 };
