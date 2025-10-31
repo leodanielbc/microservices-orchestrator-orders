@@ -1,5 +1,6 @@
 @baseUrl = http://localhost:3001
 @jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJ0ZXN0LXVzZXItMTIzIiwiZW1haWwiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiaWF0IjoxNzYxODQwOTUwLCJleHAiOjE3NjE5MjczNTB9.n8xVgX-7nwJdRBq34wY_il9NKEWtI6gBWHTJwWWbp4A
+@customerId = 14034d60-bcba-425b-b891-2841122c4b42
 
 # CREATE CUSTOMER - Success
 POST {{baseUrl}}/customers
@@ -111,5 +112,37 @@ Authorization: Bearer {{jwtToken}}
   "email": "ana.martinez@example.com",
   "phone": "+5566778899"
 }
+
+###
+
+# ========================================
+# GET CUSTOMER BY ID TESTS
+
+# GET CUSTOMER - Success (200)
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# GET CUSTOMER - Without Auth (401)
+GET {{baseUrl}}/customers/{{customerId}}
+
+###
+
+# GET CUSTOMER - Invalid JWT (401)
+GET {{baseUrl}}/customers/{{customerId}}
+Authorization: Bearer invalid-token
+
+###
+
+# GET CUSTOMER - Customer Not Found (404)
+GET {{baseUrl}}/customers/14034d60-bcba-425b-b891-2841122c4b41
+Authorization: Bearer {{jwtToken}}
+
+###
+
+# GET CUSTOMER - Invalid UUID format (400/404)
+GET {{baseUrl}}/customers/invalid-uuid-format
+Authorization: Bearer {{jwtToken}}
 
 
