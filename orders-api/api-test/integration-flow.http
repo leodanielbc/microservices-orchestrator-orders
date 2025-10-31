@@ -1,0 +1,278 @@
+### Flujo Completo de Integración - Orders API
+### Este archivo simula un flujo completo de negocio
+
+@baseUrl = http://localhost:3002
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTc2MTg4OTE1NSwiZXhwIjoxNzkzNDI1MTU1fQ.UY4kNYw3Q81eoufI4d4h_Qv-zxjptBGNXTubEhhYaKY
+
+### FLUJO 1: Crear productos para el inventario
+### =============================================
+
+### Paso 1.1: Crear Laptop
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "LAP-001",
+  "name": "Laptop Dell XPS 15",
+  "priceCents": 129900,
+  "stock": 10
+}
+
+### Guardar el ID del producto devuelto como @laptopId
+
+### Paso 1.2: Crear Monitor
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "MON-001",
+  "name": "Monitor Samsung 27",
+  "priceCents": 45000,
+  "stock": 15
+}
+
+### Guardar el ID del producto devuelto como @monitorId
+
+### Paso 1.3: Crear Teclado
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "KEY-002",
+  "name": "Teclado Mecánico Logitech",
+  "priceCents": 12000,
+  "stock": 30
+}
+
+### Guardar el ID del producto devuelto como @keyboardId
+
+### Paso 1.4: Verificar inventario
+GET {{baseUrl}}/products
+Authorization: Bearer {{token}}
+
+
+### FLUJO 2: Crear y gestionar órdenes
+
+@customerId = c6dfff5b-9a73-4abe-be0c-93220ac46045
+@laptopId = 44d7cbb1-a92c-4f91-978a-b573d7f331f8
+@monitorId = 8eecbc91-4778-4051-a07a-07922364b8a8
+@keyboardId = f9224907-ec1e-4747-8da7-045250ac47c0
+
+### Paso 2.1: Crear orden para un cliente (estado CREATED)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{laptopId}}",
+      "qty": 2
+    },
+    {
+      "product_id": "{{monitorId}}",
+      "qty": 2
+    },
+    {
+      "product_id": "{{keyboardId}}",
+      "qty": 2
+    }
+  ]
+}
+
+### Guardar el ID de la orden devuelto como @orderId
+
+### Paso 2.2: Verificar la orden creada
+@orderId = f3b8338b-6d39-40e1-8afa-4ca1b34e5ad0
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Paso 2.3: Verificar que el stock se descontó
+GET {{baseUrl}}/products/{{laptopId}}
+Authorization: Bearer {{token}}
+
+### Paso 2.4: Ver todas las órdenes en estado CREATED
+GET {{baseUrl}}/orders?status=CREATED
+Authorization: Bearer {{token}}
+
+
+### FLUJO 3: Confirmar orden (idempotente)
+
+### Paso 3.1: Confirmar la orden (CREATED -> CONFIRMED)
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Idempotency-Key: order-confirmation-test-001
+
+### Paso 3.2: Intentar confirmar de nuevo con la misma clave (debe devolver la misma respuesta)
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Idempotency-Key: order-confirmation-test-001
+
+### Paso 3.3: Verificar que la orden está CONFIRMED
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### Paso 3.4: Ver todas las órdenes confirmadas
+GET {{baseUrl}}/orders?status=CONFIRMED
+Authorization: Bearer {{token}}
+
+
+### FLUJO 4: Cancelar orden CREATED (restaura stock)
+
+### Paso 4.1: Crear otra orden para cancelarla
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{laptopId}}",
+      "qty": 1
+    }
+  ]
+}
+
+### Guardar el ID como @orderToCancel
+
+### Paso 4.2: Verificar stock antes de cancelar
+GET {{baseUrl}}/products/{{laptopId}}
+Authorization: Bearer {{token}}
+
+### Paso 4.3: Cancelar la orden (CREATED -> CANCELED)
+@orderToCancel = ad059edb-8980-418a-9878-9dc121a0dcd2
+POST {{baseUrl}}/orders/{{orderToCancel}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### Paso 4.4: Verificar que el stock se restauró
+GET {{baseUrl}}/products/{{laptopId}}
+Authorization: Bearer {{token}}
+
+### Paso 4.5: Ver todas las órdenes canceladas
+GET {{baseUrl}}/orders?status=CANCELED
+Authorization: Bearer {{token}}
+
+
+### FLUJO 5: Actualizar inventario
+
+### Paso 5.1: Actualizar precio de un producto
+
+PATCH {{baseUrl}}/products/{{laptopId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "priceCents": 119900
+}
+
+### Paso 5.2: Reponer stock
+PATCH {{baseUrl}}/products/{{laptopId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "stock": 20
+}
+
+### Paso 5.3: Verificar cambios
+GET {{baseUrl}}/products/{{laptopId}}
+Authorization: Bearer {{token}}
+
+
+### FLUJO 6: Búsquedas y filtros
+
+### Paso 6.1: Buscar productos por nombre
+GET {{baseUrl}}/products?search=Laptop
+Authorization: Bearer {{token}}
+
+### Paso 6.2: Buscar productos por SKU
+GET {{baseUrl}}/products?search=LAP
+Authorization: Bearer {{token}}
+
+### Paso 6.3: Buscar órdenes por rango de fechas
+GET {{baseUrl}}/orders?from=2025-10-01T00:00:00Z&to=2025-12-31T23:59:59Z
+Authorization: Bearer {{token}}
+
+### Paso 6.4: Buscar órdenes confirmadas en rango de fechas
+GET {{baseUrl}}/orders?status=CONFIRMED&from=2025-10-01T00:00:00Z
+Authorization: Bearer {{token}}
+
+### Paso 6.5: Paginación de productos
+GET {{baseUrl}}/products?limit=2
+Authorization: Bearer {{token}}
+
+
+### FLUJO 7: Casos de Error Comunes
+
+### Error 7.1: Stock insuficiente
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{laptopId}}",
+      "qty": 999999
+    }
+  ]
+}
+
+### Error 7.2: Cliente no existe
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "00000000-0000-0000-0000-000000000000",
+  "items": [
+    {
+      "product_id": "{{laptopId}}",
+      "qty": 1
+    }
+  ]
+}
+
+### Error 7.3: Producto no existe
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000000",
+      "qty": 1
+    }
+  ]
+}
+
+### Error 7.4: SKU duplicado
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "LAP-001",
+  "name": "Otra Laptop",
+  "priceCents": 99900,
+  "stock": 5
+}
+
+### Error 7.5: Confirmar orden sin X-Idempotency-Key
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### Error 7.6: Sin autenticación
+GET {{baseUrl}}/products

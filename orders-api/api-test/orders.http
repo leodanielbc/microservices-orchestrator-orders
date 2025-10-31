@@ -1,0 +1,202 @@
+### Variables
+@baseUrl = http://localhost:3002
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTc2MTg4OTE1NSwiZXhwIjoxNzkzNDI1MTU1fQ.UY4kNYw3Q81eoufI4d4h_Qv-zxjptBGNXTubEhhYaKY
+
+### NOTA: Reemplazar estos IDs con valores reales de tu base de datos
+@customerId = 14034d60-bcba-425b-b891-2841122c4b42
+@customerId2 = 5a7aa49a-2d7e-43c7-bf7b-2413e4b0ff3f
+
+@productId1 = 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+@productId2 = 55493a80-82da-4f78-a2a9-1df3765e615d
+
+### 1. Crear Orden Simple
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{productId1}}",
+      "qty": 2
+    }
+  ]
+}
+
+### 2. Crear Orden con múltiples items
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId2}}",
+  "items": [
+    {
+      "product_id": "{{productId1}}",
+      "qty": 1
+    },
+    {
+      "product_id": "{{productId2}}",
+      "qty": 3
+    }
+  ]
+}
+
+### 3. Crear Orden - Error: Cliente no existe
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "00000000-0000-0000-0000-000000000000",
+  "items": [
+    {
+      "product_id": "{{productId1}}",
+      "qty": 1
+    }
+  ]
+}
+
+### 4. Crear Orden - Error: Producto no existe
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "00000000-0000-0000-0000-000000000000",
+      "qty": 1
+    }
+  ]
+}
+
+### 5. Crear Orden - Error: Stock insuficiente
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{productId1}}",
+      "qty": 999999
+    }
+  ]
+}
+
+### 6. Crear Orden - Error: Items vacíos
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": []
+}
+
+### 7. Crear Orden - Error: Validación qty negativa
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{productId1}}",
+      "qty": -5
+    }
+  ]
+}
+
+### 8. Obtener Orden por ID
+@orderId = 7bfedc24-b59b-4053-abb2-844a47587f4c
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{token}}
+
+### 9. Obtener Orden - No encontrada
+GET {{baseUrl}}/orders/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+
+### 10. Listar todas las órdenes
+GET {{baseUrl}}/orders
+Authorization: Bearer {{token}}
+
+### 11. Listar órdenes con límite
+GET {{baseUrl}}/orders?limit=5
+Authorization: Bearer {{token}}
+
+### 12. Listar órdenes con cursor (paginación)
+@cursor = 1ab23bb4-ca04-4152-a597-af01b41fe4b1
+GET {{baseUrl}}/orders?limit=2&cursor={{cursor}}
+Authorization: Bearer {{token}}
+
+### 13. Filtrar órdenes por estado CREATED
+GET {{baseUrl}}/orders?status=CREATED
+Authorization: Bearer {{token}}
+
+### 14. Filtrar órdenes por estado CONFIRMED
+GET {{baseUrl}}/orders?status=CONFIRMED
+Authorization: Bearer {{token}}
+
+### 15. Filtrar órdenes por estado CANCELED
+GET {{baseUrl}}/orders?status=CANCELED
+Authorization: Bearer {{token}}
+
+### 16. Filtrar órdenes por rango de fechas
+GET {{baseUrl}}/orders?from=2025-10-01T00:00:00Z&to=2025-11-31T23:59:59Z
+Authorization: Bearer {{token}}
+
+### 17. Filtrar por estado y fechas combinados
+GET {{baseUrl}}/orders?status=CONFIRMED&from=2025-01-01T00:00:00Z
+Authorization: Bearer {{token}}
+
+### 18. Confirmar Orden (CREATED -> CONFIRMED)
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Idempotency-Key: confirm-order-{{orderId}}-1
+
+### 19. Confirmar Orden - Idempotencia (misma key)
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Idempotency-Key: confirm-order-{{orderId}}-1
+
+### 20. Confirmar Orden - Error: Ya confirmada
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Idempotency-Key: confirm-order-{{orderId}}-2
+
+### 21. Confirmar Orden - Error: Sin header X-Idempotency-Key
+POST {{baseUrl}}/orders/{{orderId}}/confirm
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 22. Cancelar Orden en estado CREATED
+POST {{baseUrl}}/orders/{{orderId}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 23. Cancelar Orden CONFIRMED (dentro de 10 min)
+POST {{baseUrl}}/orders/{{orderId}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 24. Cancelar Orden - Error: Ya cancelada
+POST {{baseUrl}}/orders/{{orderId}}/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 25. Cancelar Orden - Error: No encontrada
+POST {{baseUrl}}/orders/00000000-0000-0000-0000-000000000000/cancel
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+### 26. Sin autenticación
+GET {{baseUrl}}/orders

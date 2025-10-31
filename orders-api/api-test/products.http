@@ -1,0 +1,154 @@
+### Variables
+@baseUrl = http://localhost:3002
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTc2MTg4OTE1NSwiZXhwIjoxNzkzNDI1MTU1fQ.UY4kNYw3Q81eoufI4d4h_Qv-zxjptBGNXTubEhhYaKY
+
+### 1. Crear Producto
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-001",
+  "name": "Laptop Dell XPS 15",
+  "priceCents": 129900,
+  "stock": 10
+}
+
+### 2. Crear Producto - Error SKU duplicado
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-001",
+  "name": "Laptop HP",
+  "priceCents": 99900,
+  "stock": 5
+}
+
+### 3. Crear Producto - Validación error (precio negativo)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-003",
+  "name": "Mouse",
+  "priceCents": -100,
+  "stock": 50
+}
+
+### 4. Crear múltiples productos para testing
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-002",
+  "name": "Monitor Samsung 27",
+  "priceCents": 45000,
+  "stock": 15
+}
+
+###
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-003",
+  "name": "Teclado Mecánico",
+  "priceCents": 12000,
+  "stock": 30
+}
+
+###
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "sku": "PROD-004",
+  "name": "Mouse Gaming",
+  "priceCents": 8500,
+  "stock": 25
+}
+
+### 5. Obtener Producto por ID
+@productId=1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+GET {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{token}}
+
+### 6. Obtener Producto - No encontrado
+GET {{baseUrl}}/products/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{token}}
+
+### 7. Listar todos los productos
+GET {{baseUrl}}/products
+Authorization: Bearer {{token}}
+
+### 8. Buscar productos (con paginación)
+GET {{baseUrl}}/products?limit=5
+Authorization: Bearer {{token}}
+
+### 9. Buscar productos con cursor
+@cursor = 55493a80-82da-4f78-a2a9-1df3765e615d
+GET {{baseUrl}}/products?limit=2&cursor={{cursor}}
+Authorization: Bearer {{token}}
+
+### 10. Buscar productos por nombre
+GET {{baseUrl}}/products?search=Laptop
+Authorization: Bearer {{token}}
+
+### 11. Buscar productos por SKU
+GET {{baseUrl}}/products?search=PROD-002
+Authorization: Bearer {{token}}
+
+### 12. Actualizar precio del producto
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "priceCents": 119900
+}
+
+### 13. Actualizar stock del producto
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "stock": 20
+}
+
+### 14. Actualizar precio y stock
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "priceCents": 125000,
+  "stock": 16
+}
+
+### 15. Actualizar producto - Error validación (precio negativo)
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "priceCents": -5000
+}
+
+### 16. Actualizar producto - No encontrado
+PATCH {{baseUrl}}/products/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "priceCents": 10000
+}
+
+### 17. Sin token de autenticación
+GET {{baseUrl}}/products
