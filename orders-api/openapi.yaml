@@ -1,0 +1,858 @@
+openapi: 3.0.3
+info:
+  title: Orders API
+  description: |
+    API de gestión de productos y pedidos (Orders) con Node.js, Express y MySQL.
+
+    Esta API permite:
+    - Gestión de productos (crear, actualizar precio/stock, consultar)
+    - Creación y gestión de órdenes/pedidos
+    - Validación de clientes mediante integración con Customers API
+    - Confirmación idempotente de órdenes
+    - Cancelación de órdenes con restauración de stock
+    - Búsqueda y filtrado con paginación
+
+    ## Autenticación
+    Todos los endpoints requieren autenticación mediante JWT (JSON Web Token).
+    Se debe enviar el token en el header `Authorization` con el formato: `Bearer <token>`
+
+    ## Idempotencia
+    El endpoint de confirmación de órdenes requiere el header `X-Idempotency-Key` para
+    garantizar que la operación se ejecute solo una vez, incluso si se reenvía la petición.
+
+    ## Gestión de Stock
+    - Al crear una orden, el stock se descuenta automáticamente de forma transaccional
+    - Al cancelar una orden, el stock se restaura automáticamente
+    - Las transacciones garantizan consistencia de datos
+
+    ## Estados de Órdenes
+    - **CREATED**: Orden creada, stock descontado
+    - **CONFIRMED**: Orden confirmada (idempotente)
+    - **CANCELED**: Orden cancelada, stock restaurado
+
+    ## Reglas de Negocio
+    - Solo órdenes CREATED pueden ser confirmadas
+    - Órdenes CONFIRMED solo pueden cancelarse dentro de los primeros 10 minutos
+    - Órdenes CREATED pueden cancelarse en cualquier momento
+
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:3002
+    description: Servidor de desarrollo local
+
+tags:
+  - name: Products
+    description: Gestión de productos e inventario
+  - name: Orders
+    description: Gestión de órdenes y pedidos
+
+security:
+  - bearerAuth: []
+
+# PRODUCTS ENDPOINTS
+paths:
+
+  /products:
+    post:
+      tags:
+        - Products
+      summary: Crear un nuevo producto
+      description: Crea un nuevo producto en el inventario con SKU único, nombre, precio y stock inicial
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              laptop:
+                summary: Laptop
+                value:
+                  sku: LAP-001
+                  name: Laptop Dell XPS 15
+                  priceCents: 129900
+                  stock: 10
+      responses:
+        '201':
+          description: Producto creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: El SKU ya está registrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Product with this SKU already exists.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      tags:
+        - Products
+      summary: Buscar y listar productos
+      description: |
+        Obtiene una lista de productos con soporte para:
+        - Búsqueda por nombre o SKU
+        - Paginación basada en cursor
+        - Límite configurable de resultados
+      operationId: searchProducts
+      parameters:
+        - name: search
+          in: query
+          description: Término de búsqueda (busca en nombre y SKU)
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+          example: Laptop
+        - name: cursor
+          in: query
+          description: ID del último producto de la página anterior (para paginación)
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Número máximo de resultados a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Lista de productos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchProductsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Obtener producto por ID
+      description: Obtiene los detalles completos de un producto específico
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      responses:
+        '200':
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Product not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    patch:
+      tags:
+        - Products
+      summary: Actualizar producto
+      description: |
+        Actualiza el precio y/o stock de un producto existente.
+        Se puede actualizar uno o ambos campos.
+        Al menos un campo debe estar presente.
+      operationId: updateProduct
+      parameters:
+        - $ref: '#/components/parameters/ProductId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+            examples:
+              price:
+                summary: Actualizar solo precio
+                value:
+                  priceCents: 119900
+              stock:
+                summary: Actualizar solo stock
+                value:
+                  stock: 20
+              both:
+                summary: Actualizar precio y stock
+                value:
+                  priceCents: 125000
+                  stock: 15
+      responses:
+        '200':
+          description: Producto actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Product not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+
+# ORDERS ENDPOINTS
+
+  /orders:
+    post:
+      tags:
+        - Orders
+      summary: Crear una nueva orden
+      description: |
+        Crea una nueva orden para un cliente existente.
+
+        **Validaciones:**
+        - El cliente debe existir en Customers API
+        - Todos los productos deben existir
+        - Debe haber stock suficiente para cada producto
+
+        **Proceso:**
+        1. Valida el cliente en Customers API
+        2. Valida stock disponible para cada producto
+        3. Descuenta stock de forma transaccional
+        4. Crea la orden con estado CREATED
+        5. Calcula el total automáticamente
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              singleItem:
+                summary: Orden con un producto
+                value:
+                  customer_id: 14034d60-bcba-425b-b891-2841122c4b42
+                  items:
+                    - product_id: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+                      qty: 2
+              multipleItems:
+                summary: Orden con múltiples productos
+                value:
+                  customer_id: 14034d60-bcba-425b-b891-2841122c4b42
+                  items:
+                    - product_id: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+                      qty: 1
+                    - product_id: 55493a80-82da-4f78-a2a9-1df3765e615d
+                      qty: 3
+      responses:
+        '201':
+          description: Orden creada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Error de validación, cliente no existe, o stock insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                customerNotFound:
+                  summary: Cliente no encontrado
+                  value:
+                    message: Customer with id xxx not found.
+                insufficientStock:
+                  summary: Stock insuficiente
+                  value:
+                    message: "Insufficient stock for product Laptop Dell XPS 15 (SKU: LAP-001). Available: 5, Requested: 10"
+                emptyItems:
+                  summary: Items vacíos
+                  value:
+                    message: Order must have at least one item.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+    get:
+      tags:
+        - Orders
+      summary: Buscar y listar órdenes
+      description: |
+        Obtiene una lista de órdenes con soporte para:
+        - Filtrado por estado (CREATED, CONFIRMED, CANCELED)
+        - Filtrado por rango de fechas
+        - Paginación basada en cursor
+        - Límite configurable de resultados
+        - Incluye items de cada orden
+      operationId: searchOrders
+      parameters:
+        - name: status
+          in: query
+          description: Filtrar por estado de la orden
+          required: false
+          schema:
+            type: string
+            enum: [CREATED, CONFIRMED, CANCELED]
+          example: CONFIRMED
+        - name: from
+          in: query
+          description: Fecha de inicio (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2025-10-01T00:00:00Z"
+        - name: to
+          in: query
+          description: Fecha de fin (ISO 8601)
+          required: false
+          schema:
+            type: string
+            format: date-time
+          example: "2025-10-31T23:59:59Z"
+        - name: cursor
+          in: query
+          description: ID de la última orden de la página anterior (para paginación)
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Número máximo de resultados a retornar
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+      responses:
+        '200':
+          description: Lista de órdenes obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchOrdersResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Obtener orden por ID
+      description: Obtiene los detalles completos de una orden específica, incluyendo todos sus items
+      operationId: getOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Orden encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Order not found
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /orders/{id}/confirm:
+    post:
+      tags:
+        - Orders
+      summary: Confirmar una orden (idempotente)
+      description: |
+        Confirma una orden cambiando su estado de CREATED a CONFIRMED.
+
+        **Idempotencia:**
+        - Requiere el header `X-Idempotency-Key`
+        - Si se envía la misma key múltiples veces, retorna el mismo resultado
+        - La key expira después de 24 horas
+
+        **Reglas:**
+        - Solo órdenes en estado CREATED pueden ser confirmadas
+        - Una vez confirmada, no puede volver a estado CREATED
+        - El stock ya fue descontado al crear la orden
+      operationId: confirmOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - name: X-Idempotency-Key
+          in: header
+          description: Clave de idempotencia para garantizar ejecución única
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 255
+          example: confirm-order-7bfedc24-test-001
+      responses:
+        '200':
+          description: Orden confirmada exitosamente (o ya estaba confirmada con la misma key)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Header de idempotencia faltante o estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missingHeader:
+                  summary: Header faltante
+                  value:
+                    message: Missing or invalid X-Idempotency-Key header
+                invalidStatus:
+                  summary: Estado inválido
+                  value:
+                    message: Cannot confirm order with status CONFIRMED. Only CREATED orders can be confirmed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Order not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /orders/{id}/cancel:
+    post:
+      tags:
+        - Orders
+      summary: Cancelar una orden
+      description: |
+        Cancela una orden cambiando su estado a CANCELED y restaurando el stock.
+
+        **Reglas:**
+        - Órdenes CREATED pueden cancelarse en cualquier momento
+        - Órdenes CONFIRMED solo pueden cancelarse dentro de los primeros 10 minutos
+        - Órdenes CANCELED no pueden volver a cancelarse
+        - El stock se restaura automáticamente de forma transaccional
+      operationId: cancelOrder
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Orden cancelada exitosamente y stock restaurado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: No se puede cancelar la orden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                alreadyCanceled:
+                  summary: Ya cancelada
+                  value:
+                    message: Order is already canceled.
+                timeExpired:
+                  summary: Tiempo expirado (>10 min)
+                  value:
+                    message: Cannot cancel confirmed order after 10 minutes.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Orden no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: Order not found.
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+
+# COMPONENTS
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT para autenticación de usuarios
+
+  parameters:
+    ProductId:
+      name: id
+      in: path
+      description: ID único del producto (UUID)
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+
+    OrderId:
+      name: id
+      in: path
+      description: ID único de la orden (UUID)
+      required: true
+      schema:
+        type: string
+        format: uuid
+      example: 7bfedc24-b59b-4053-abb2-844a47587f4c
+
+  schemas:
+    # PRODUCT SCHEMAS
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del producto
+          example: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+        sku:
+          type: string
+          description: Código SKU único del producto
+          example: LAP-001
+        name:
+          type: string
+          description: Nombre del producto
+          example: Laptop Dell XPS 15
+        priceCents:
+          type: integer
+          description: Precio en centavos (100 = $1.00)
+          minimum: 0
+          example: 129900
+        stock:
+          type: integer
+          description: Cantidad disponible en inventario
+          minimum: 0
+          example: 10
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+          example: "2025-10-31T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de última actualización
+          example: "2025-10-31T12:00:00Z"
+      required:
+        - id
+        - sku
+        - name
+        - priceCents
+        - stock
+
+    CreateProductRequest:
+      type: object
+      properties:
+        sku:
+          type: string
+          description: Código SKU único del producto
+          minLength: 1
+          maxLength: 50
+          example: LAP-001
+        name:
+          type: string
+          description: Nombre del producto
+          minLength: 1
+          maxLength: 200
+          example: Laptop Dell XPS 15
+        priceCents:
+          type: integer
+          description: Precio en centavos (100 = $1.00)
+          minimum: 0
+          example: 129900
+        stock:
+          type: integer
+          description: Cantidad inicial en inventario
+          minimum: 0
+          example: 10
+      required:
+        - sku
+        - name
+        - priceCents
+        - stock
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        priceCents:
+          type: integer
+          description: Nuevo precio en centavos
+          minimum: 0
+          example: 119900
+        stock:
+          type: integer
+          description: Nueva cantidad en inventario
+          minimum: 0
+          example: 20
+      minProperties: 1
+      description: Al menos un campo debe estar presente
+
+    SearchProductsResponse:
+      type: object
+      properties:
+        products:
+          type: array
+          description: Lista de productos encontrados
+          items:
+            $ref: '#/components/schemas/Product'
+        nextCursor:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID del último producto (usar como cursor para la siguiente página)
+          example: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+
+    # ORDER SCHEMAS
+
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único de la orden
+          example: 7bfedc24-b59b-4053-abb2-844a47587f4c
+        customerId:
+          type: string
+          format: uuid
+          description: ID del cliente (de Customers API)
+          example: 14034d60-bcba-425b-b891-2841122c4b42
+        status:
+          type: string
+          enum: [CREATED, CONFIRMED, CANCELED]
+          description: Estado actual de la orden
+          example: CREATED
+        totalCents:
+          type: integer
+          description: Total de la orden en centavos (calculado automáticamente)
+          example: 259800
+        items:
+          type: array
+          description: Items incluidos en la orden
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        createdAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de creación
+          example: "2025-10-31T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Fecha y hora de última actualización
+          example: "2025-10-31T12:00:00Z"
+      required:
+        - id
+        - customerId
+        - status
+        - totalCents
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador único del item
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        orderId:
+          type: string
+          format: uuid
+          description: ID de la orden a la que pertenece
+          example: 7bfedc24-b59b-4053-abb2-844a47587f4c
+        productId:
+          type: string
+          format: uuid
+          description: ID del producto
+          example: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+        qty:
+          type: integer
+          description: Cantidad solicitada
+          minimum: 1
+          example: 2
+        unitPriceCents:
+          type: integer
+          description: Precio unitario en el momento de la orden (centavos)
+          example: 129900
+        subtotalCents:
+          type: integer
+          description: Subtotal del item (qty × unitPriceCents)
+          example: 259800
+      required:
+        - id
+        - productId
+        - qty
+        - unitPriceCents
+        - subtotalCents
+
+    CreateOrderRequest:
+      type: object
+      properties:
+        customer_id:
+          type: string
+          format: uuid
+          description: ID del cliente (debe existir en Customers API)
+          example: 14034d60-bcba-425b-b891-2841122c4b42
+        items:
+          type: array
+          description: Lista de productos a ordenar
+          minItems: 1
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+                format: uuid
+                description: ID del producto
+                example: 1e7ff62f-de4b-4dbc-bebf-a97c4e2f1927
+              qty:
+                type: integer
+                description: Cantidad a ordenar
+                minimum: 1
+                example: 2
+            required:
+              - product_id
+              - qty
+      required:
+        - customer_id
+        - items
+
+    SearchOrdersResponse:
+      type: object
+      properties:
+        orders:
+          type: array
+          description: Lista de órdenes encontradas
+          items:
+            $ref: '#/components/schemas/Order'
+        nextCursor:
+          type: string
+          format: uuid
+          nullable: true
+          description: ID de la última orden (usar como cursor para la siguiente página)
+          example: 7bfedc24-b59b-4053-abb2-844a47587f4c
+
+    # ERROR SCHEMAS
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje de error descriptivo
+          example: Server error
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Mensaje general del error
+          example: Validation failed
+        details:
+          type: array
+          description: Lista de errores de validación específicos
+          items:
+            type: string
+          example:
+            - '"sku" is required'
+            - '"priceCents" must be greater than or equal to 0'
+
+  # RESPONSES
+
+  responses:
+    Unauthorized:
+      description: No autorizado - Token inválido, expirado o ausente
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            missingToken:
+              summary: Token ausente
+              value:
+                message: Authentication required. Missing Authorization header.
+            invalidToken:
+              summary: Token inválido
+              value:
+                message: Invalid or expired token.
+
+    ValidationError:
+      description: Error de validación en los datos de entrada
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+
+    ServerError:
+      description: Error interno del servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            message: Server error
