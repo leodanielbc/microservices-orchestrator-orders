@@ -1,0 +1,45 @@
+service: orders-orchestrator
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  timeout: 30
+  memorySize: 256
+  environment:
+    CUSTOMERS_API_URL: ${env:CUSTOMERS_API_URL}
+    ORDERS_API_URL: ${env:ORDERS_API_URL}
+    SERVICE_TOKEN: ${env:SERVICE_TOKEN}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: '*'
+
+functions:
+  orchestrateOrder:
+    handler: src/handler.orchestrateOrder
+    description: Orchestrates order creation and confirmation workflow
+    events:
+      - httpApi:
+          path: /orchestrate-order
+          method: post
+    environment:
+      CUSTOMERS_API_URL: ${env:CUSTOMERS_API_URL}
+      ORDERS_API_URL: ${env:ORDERS_API_URL}
+      SERVICE_TOKEN: ${env:SERVICE_TOKEN}
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3005
