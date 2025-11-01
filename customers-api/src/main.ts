@@ -14,6 +14,7 @@ import { SearchCustomersRoute } from './infrastructure/api/express/routes/search
 import { UpdateCustomerRoute } from './infrastructure/api/express/routes/update-customer.router';
 import { DeleteCustomerRoute } from './infrastructure/api/express/routes/delete-customer.router';
 import { ApiExpress } from './infrastructure/api/express/api.express';
+import { HealthCheckRoute } from './infrastructure/api/express/routes/health.router';
 
 function main () {
     const repository = CustomerRepositoryPrisma.create(prisma);
@@ -31,6 +32,7 @@ function main () {
     const searchCustomersRoute = SearchCustomersRoute.create(searchCustomersUsecase);
     const updateCustomerRoute = UpdateCustomerRoute.create(updateCustomerUsecase);
     const deleteCustomerRoute = DeleteCustomerRoute.create(deleteCustomerUsecase);
+    const healthCheckRoute = HealthCheckRoute.create();
 
     const api = ApiExpress.create([
         searchCustomersRoute,
@@ -39,6 +41,7 @@ function main () {
         getCustomerRoute,
         updateCustomerRoute,
         deleteCustomerRoute,
+        healthCheckRoute,
     ]);
     const port = 3001;
     api.start(port);

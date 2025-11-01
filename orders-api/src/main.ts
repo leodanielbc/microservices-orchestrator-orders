@@ -32,6 +32,7 @@ import { ConfirmOrderRoute } from './infrastructure/api/express/routes/confirm-o
 import { CancelOrderRoute } from './infrastructure/api/express/routes/cancel-order.router';
 
 import { ApiExpress } from './infrastructure/api/express/api.express';
+import { HealthCheckRoute } from './infrastructure/api/express/routes/health.router';
 
 function main() {
     // Repositories
@@ -74,8 +75,11 @@ function main() {
     const searchOrdersRoute = SearchOrdersRoute.create(searchOrdersUsecase);
     const confirmOrderRoute = ConfirmOrderRoute.create(confirmOrderUsecase);
     const cancelOrderRoute = CancelOrderRoute.create(cancelOrderUsecase);
+    const healthCheckRoute = HealthCheckRoute.create();
 
     const api = ApiExpress.create([
+        healthCheckRoute,
+
         // Products
         searchProductsRoute,
         createProductRoute,
