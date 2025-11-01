@@ -1,0 +1,124 @@
+version: "3.8"
+
+services:
+  # MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: orders-system-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: customers_db
+      MYSQL_USER: ${MYSQL_USER:-orders_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-orders_pass123}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - orders-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_ROOT_PASSWORD:-root123}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Customers API Service
+  customers-api:
+    build:
+      context: ./customers-api
+      dockerfile: Dockerfile
+    container_name: customers-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-orders_user}:${MYSQL_PASSWORD:-orders_pass123}@mysql:3306/customers_db
+      JWT_SECRET: 3d6f0eb7-9e1f-4c3c-8a5b-6b7b8e9f7c2a
+      SERVICE_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnRlcm5hbC1zZXJ2aWNlIiwiaXNzIjoib3JkZXJzLXN5c3RlbSIsInNlcnZpY2UiOnRydWUsImlhdCI6MTc2MTk1NDA2OH0.tk8NicPamqaWlRMt5gUGmJrWJJ1jPKJs4KOn4VhGRBw
+      PORT: 3001
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - orders-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3001/health",
+          "||",
+          "exit",
+          "1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+  # Orders API Service
+  orders-api:
+    build:
+      context: ./orders-api
+      dockerfile: Dockerfile
+    container_name: orders-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql://${MYSQL_USER:-orders_user}:${MYSQL_PASSWORD:-orders_pass123}@mysql:3306/orders_db
+      JWT_SECRET: 3d6f0eb7-9e1f-4c3c-8a5b-6b7b8e9f7c2a
+      SERVICE_TOKEN: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJpbnRlcm5hbC1zZXJ2aWNlIiwiaXNzIjoib3JkZXJzLXN5c3RlbSIsInNlcnZpY2UiOnRydWUsImlhdCI6MTc2MTk1NDA2OH0.tk8NicPamqaWlRMt5gUGmJrWJJ1jPKJs4KOn4VhGRBw
+      CUSTOMERS_API_URL: http://customers-api:3001
+      PORT: 3002
+      NODE_ENV: production
+    ports:
+      - "3002:3002"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - orders-network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3002/health",
+          "||",
+          "exit",
+          "1",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+networks:
+  orders-network:
+    driver: bridge
+    name: orders-network
+
+volumes:
+  mysql_data:
+    driver: local
+    name: orders-system-mysql-data
