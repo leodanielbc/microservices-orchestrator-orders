@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 type ProductProps = {
     id: string;
     sku: string;
@@ -13,7 +15,7 @@ export class Product {
 
     public static create(sku: string, name: string, priceCents: number, stock: number) {
         return new Product({
-            id: crypto.randomUUID().toString(),
+            id: randomUUID(),
             sku,
             name,
             priceCents,

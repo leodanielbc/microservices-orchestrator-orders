@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { OrderItem } from './order-item';
 
 export enum OrderStatus {
@@ -23,7 +24,7 @@ export class Order {
         const totalCents = items.reduce((sum, item) => sum + item.subtotalCents, 0);
 
         return new Order({
-            id: crypto.randomUUID().toString(),
+            id: randomUUID(),
             customerId,
             status: OrderStatus.CREATED,
             totalCents,

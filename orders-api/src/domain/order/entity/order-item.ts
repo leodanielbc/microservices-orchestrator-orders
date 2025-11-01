@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 type OrderItemProps = {
     id: string;
     orderId?: string;
@@ -14,7 +16,7 @@ export class OrderItem {
         const subtotalCents = qty * unitPriceCents;
 
         return new OrderItem({
-            id: crypto.randomUUID().toString(),
+            id: randomUUID(),
             productId,
             qty,
             unitPriceCents,
