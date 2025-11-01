@@ -58,7 +58,6 @@ microservices-orchestrator-orders/
 │       └── 01-create-databases.sql  # Script de inicialización
 │
 ├── docker-compose.yml       # Configuración producción
-├── docker-compose.dev.yml   # Configuración desarrollo
 └── README.md
 ```
 

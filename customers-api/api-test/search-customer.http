@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:3001
-@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMjM0NSIsImVtYWlsIjoidGVzdEBleGFtcGxlLmNvbSIsImlhdCI6MTc2MTkzNDU5NCwiZXhwIjoxNzkzNDcwNTk0fQ.arZJLwy9D1eGOJ2nRt1byRn97Te2ags6I6pHZIK1t94
+@jwtToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
 @customerId = 14034d60-bcba-425b-b891-2841122c4b42
 
 
