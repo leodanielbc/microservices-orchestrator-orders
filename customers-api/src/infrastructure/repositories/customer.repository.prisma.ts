@@ -3,7 +3,7 @@ import { Customer } from "../../domain/customer/entity/customer";
 import {
   CustomerUpdateData,
 } from "../../domain/customer/value-objects/customer-data";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const mapToDomain = (prismaCustomer: any): Customer => {
   return Customer.with({
