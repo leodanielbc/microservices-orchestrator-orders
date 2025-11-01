@@ -56,6 +56,7 @@ function main() {
         orderRepository,
         productRepository,
         customersApiService,
+        idempotencyRepository,
         prisma
     );
     const getOrderUsecase = GetOrderUseCase.create(orderRepository);
