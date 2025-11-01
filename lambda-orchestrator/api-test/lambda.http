@@ -5,8 +5,8 @@
 ### 4. Un customer y producto ya creados en las APIs
 
 @baseUrl = http://localhost:3000
-@customerId = c6dfff5b-9a73-4abe-be0c-93220ac46045
-@productId = 8eecbc91-4778-4051-a07a-07922364b8a8
+@customerId = e85709c6-5e48-4558-bed1-71be6b608501
+@productId = 8d2a0166-2617-44d9-a22a-c8ed030e4e42
 
 
 
@@ -71,8 +71,7 @@ Content-Type: application/json
 # Verificación
 
 ### Verificar orden creada en Orders API
-@orderId = 4df216a7-fe9d-429d-aa7b-e1b8c6e2cfe0
-@productId = 22396963-5ca6-4130-b781-2875f8c1345b
+@orderId = d084178c-0fde-428b-b9c9-32f320d4e5d6
 
 GET http://localhost:3002/orders/{{orderId}}
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA

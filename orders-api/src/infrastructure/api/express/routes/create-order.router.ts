@@ -1,5 +1,5 @@
 import { Response, Request } from "express";
-import { validateCreateOrder } from "../../validators/order.validator";
+import { validateCreateOrder, validateIdempotencyKey } from "../../validators/order.validator";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { CreateOrderUseCase } from "../../../../usecases/create-order/create-order.usecase";
 import { HttpMethod, Route, RouteHandler } from "./route";
@@ -22,11 +22,19 @@ export class CreateOrderRoute implements Route {
   public getHandler(): RouteHandler[] {
     return [
         validateCreateOrder,
+        validateIdempotencyKey,
         authMiddleware,
         async (req: Request, res: Response) => {
             try {
             const input = req.body;
-            const order = await this.createOrderUseCase.execute(input);
+            const idempotencyKey = req.headers['x-idempotency-key'];
+
+            if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+                res.status(400).json({ message: "X-Idempotency-Key header is required" });
+                return;
+            }
+
+            const order = await this.createOrderUseCase.execute(input, idempotencyKey);
             res.status(201).json(order);
             } catch (error: any) {
             if (error.message.includes("not found") || error.message.includes("Insufficient stock")) {

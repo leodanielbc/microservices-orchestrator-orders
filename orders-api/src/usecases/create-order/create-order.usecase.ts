@@ -2,6 +2,7 @@ import { Order } from '../../domain/order/entity/order';
 import { OrderItem } from '../../domain/order/entity/order-item';
 import { OrderRepository } from '../../domain/order/gateway/order.repository';
 import { ProductRepository } from '../../domain/product/gateway/product.repository';
+import { IdempotencyRepository } from '../../domain/order/gateway/idempotency.repository';
 import { CustomersApiService } from '../../infrastructure/services/customers-api.service';
 import { PrismaClient } from '@prisma/client';
 
@@ -20,6 +21,7 @@ export class CreateOrderUseCase {
         private orderRepository: OrderRepository,
         private productRepository: ProductRepository,
         private customersApiService: CustomersApiService,
+        private idempotencyRepository: IdempotencyRepository,
         private prismaClient: PrismaClient
     ) {}
 
@@ -27,12 +29,23 @@ export class CreateOrderUseCase {
         orderRepository: OrderRepository,
         productRepository: ProductRepository,
         customersApiService: CustomersApiService,
+        idempotencyRepository: IdempotencyRepository,
         prismaClient: PrismaClient
     ) {
-        return new CreateOrderUseCase(orderRepository, productRepository, customersApiService, prismaClient);
+        return new CreateOrderUseCase(orderRepository, productRepository, customersApiService, idempotencyRepository, prismaClient);
     }
 
-    async execute(data: CreateOrderInput): Promise<Order> {
+    async execute(data: CreateOrderInput, idempotencyKey: string): Promise<Order> {
+        
+        const existingKey = await this.idempotencyRepository.findByKey(idempotencyKey);
+
+        if (existingKey) {
+
+            const existingOrder = await this.orderRepository.findById(existingKey.targetId);
+            if (existingOrder) {
+                return existingOrder;
+            }
+        }
         // Validar que el cliente existe en Customers API
         const customer = await this.customersApiService.validateCustomer(data.customer_id);
         if (!customer) {
@@ -77,6 +90,19 @@ export class CreateOrderUseCase {
             // Crear orden
             const order = Order.create(data.customer_id, orderItems);
             const createdOrder = await this.orderRepository.save(order);
+
+            // Save idempotency key (expires in 24 hours)
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 24);
+
+            await this.idempotencyRepository.save({
+                key: idempotencyKey,
+                targetType: 'order_creation',
+                targetId: createdOrder.id,
+                status: 'completed',
+                responseBody: JSON.stringify(createdOrder),
+                expiresAt: expiresAt,
+            });
 
             return createdOrder;
         });

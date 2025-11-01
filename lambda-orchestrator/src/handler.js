@@ -113,8 +113,13 @@ exports.orchestrateOrder = async (event, context) => {
             throw error;
         }
 
-        // Step 2: Create order
+        // Step 2: Create order (with idempotency)
         console.log('Step 2: Creating order...');
+
+        // Use the idempotency_key for order creation
+        const orderIdempotencyKey = `create-order-${idempotency_key}`;
+        console.log(`Using idempotency key for order creation: ${orderIdempotencyKey}`);
+
         let order;
         try {
             const createOrderResponse = await axios.post(
@@ -126,6 +131,7 @@ exports.orchestrateOrder = async (event, context) => {
                 {
                     headers: {
                         'Authorization': `Bearer ${serviceToken}`,
+                        'X-Idempotency-Key': orderIdempotencyKey,
                         'Content-Type': 'application/json'
                     }
                 }
@@ -151,9 +157,9 @@ exports.orchestrateOrder = async (event, context) => {
         // Step 3: Confirm order (with idempotency)
         console.log(`Step 3: Confirming order ${order.id}...`);
 
-        // Usar el idempotency_key enviado por el cliente (ya validado como requerido)
-        const idempotencyKey = idempotency_key;
-        console.log(`Using idempotency key: ${idempotencyKey}`);
+        // Use a different idempotency key for order confirmation
+        const confirmIdempotencyKey = `confirm-order-${idempotency_key}`;
+        console.log(`Using idempotency key for order confirmation: ${confirmIdempotencyKey}`);
         let confirmedOrder;
         try {
             const confirmOrderResponse = await axios.post(
@@ -162,7 +168,7 @@ exports.orchestrateOrder = async (event, context) => {
                 {
                     headers: {
                         'Authorization': `Bearer ${serviceToken}`,
-                        'X-Idempotency-Key': idempotencyKey,
+                        'X-Idempotency-Key': confirmIdempotencyKey,
                         'Content-Type': 'application/json'
                     }
                 }
