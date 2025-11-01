@@ -1,0 +1,87 @@
+### Asegúrate de tener:
+### 1. Lambda corriendo en http://localhost:3000 (serverless offline)
+### 2. Customers API corriendo en http://localhost:3001
+### 3. Orders API corriendo en http://localhost:3002
+### 4. Un customer y producto ya creados en las APIs
+
+@baseUrl = http://localhost:3000
+@customerId = c6dfff5b-9a73-4abe-be0c-93220ac46045
+@productId = 8eecbc91-4778-4051-a07a-07922364b8a8
+
+
+
+# Prueba Completa
+
+### PASO 1: Crear Customer en Customers API
+POST http://localhost:3001/customers
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
+Content-Type: application/json
+
+{
+  "name": "Test Customer para Lambda",
+  "email": "lambda-test@example.com",
+  "phone": "+1234567890"
+}
+
+### PASO 2: Crear Producto en Orders API
+POST http://localhost:3002/products
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
+Content-Type: application/json
+
+{
+  "sku": "LAMBDA-TEST-001",
+  "name": "Producto Test Lambda",
+  "priceCents": 5000,
+  "stock": 100
+}
+
+### PASO 3: Orquestar pedido CON idempotency_key
+# El cliente genera un UUID y lo envía en cada request
+# Si hay retry, enviar el MISMO UUID para evitar duplicados
+POST {{baseUrl}}/orchestrate-order
+Content-Type: application/json
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{productId}}",
+      "qty": 2
+    }
+  ],
+  "idempotency_key": "client-uuid-123e4567-e89b-12d3-a456-426614174000"
+}
+
+### PASO 4: Retry con EL MISMO idempotency_key (debe devolver el mismo resultado)
+# Ejecutar este request múltiples veces - debe devolver siempre el mismo resultado
+POST {{baseUrl}}/orchestrate-order
+Content-Type: application/json
+
+{
+  "customer_id": "{{customerId}}",
+  "items": [
+    {
+      "product_id": "{{productId}}",
+      "qty": 2
+    }
+  ],
+  "idempotency_key": "client-uuid-123e4567-e89b-12d3-a456-426614174000"
+}
+
+# Verificación
+
+### Verificar orden creada en Orders API
+@orderId = 4df216a7-fe9d-429d-aa7b-e1b8c6e2cfe0
+@productId = 22396963-5ca6-4130-b781-2875f8c1345b
+
+GET http://localhost:3002/orders/{{orderId}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
+
+### Verificar que el stock fue descontado
+GET http://localhost:3002/products/{{productId}}
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
+
+### Verificar que la orden está en estado CONFIRMED
+GET http://localhost:3002/orders?status=CONFIRMED
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJuYW1lIjoiVGVzdCBVc2VyIiwiaWF0IjoxNzYxOTUyODI5fQ.p25XlVRQJBT4Bq85R-6j4Bnj5hY4-h-57P-QrsID7iA
+
