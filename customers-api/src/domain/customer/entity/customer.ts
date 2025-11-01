@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 type CustomerProps = {
     id: string;
     name: string;
@@ -13,7 +15,7 @@ export class Customer {
 
     public static create(name: string, email: string, phone:string) {
         return new Customer({
-            id: crypto.randomUUID().toString(),
+            id: randomUUID(),
             name,
             email,
             phone,
