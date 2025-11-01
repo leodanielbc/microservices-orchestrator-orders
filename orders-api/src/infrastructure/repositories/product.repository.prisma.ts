@@ -1,7 +1,7 @@
 import { ProductRepository } from "../../domain/product/gateway/product.repository";
 import { Product } from "../../domain/product/entity/product";
 import { ProductUpdateData } from "../../domain/product/value-objects/product-data";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const mapToDomain = (prismaProduct: any): Product => {
   return Product.with({

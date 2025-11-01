@@ -1,7 +1,7 @@
 import { Order, OrderStatus } from '../../domain/order/entity/order';
 import { OrderRepository } from '../../domain/order/gateway/order.repository';
 import { ProductRepository } from '../../domain/product/gateway/product.repository';
-import { PrismaClient } from '../../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 export class CancelOrderUseCase {
     constructor(

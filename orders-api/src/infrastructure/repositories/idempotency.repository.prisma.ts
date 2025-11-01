@@ -1,5 +1,5 @@
 import { IdempotencyRepository, IdempotencyKeyData } from "../../domain/order/gateway/idempotency.repository";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const mapToDomain = (prismaKey: any): IdempotencyKeyData => {
   return {

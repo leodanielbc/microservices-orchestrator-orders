@@ -1,7 +1,7 @@
 import { OrderRepository } from "../../domain/order/gateway/order.repository";
 import { Order, OrderStatus } from "../../domain/order/entity/order";
 import { OrderItem } from "../../domain/order/entity/order-item";
-import { PrismaClient } from "../../generated/prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const mapOrderItemToDomain = (prismaItem: any): OrderItem => {
   return OrderItem.with({

@@ -3,7 +3,7 @@ import { OrderItem } from '../../domain/order/entity/order-item';
 import { OrderRepository } from '../../domain/order/gateway/order.repository';
 import { ProductRepository } from '../../domain/product/gateway/product.repository';
 import { CustomersApiService } from '../../infrastructure/services/customers-api.service';
-import { PrismaClient } from '../../generated/prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 export type CreateOrderItemInput = {
     product_id: string;
